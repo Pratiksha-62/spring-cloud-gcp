@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -35,9 +34,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.awaitility.Awaitility;
 import org.awaitility.Duration;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,11 +62,8 @@ import static org.awaitility.Awaitility.await;
  * @author Chengyuan Zhao
  * @author Dmitry Solomakha
  * @author Daniel Zou
- * @author Mike Eltsufin
  */
 public class PubSubTemplateIntegrationTests {
-
-	private static final Log LOGGER = LogFactory.getLog(PubSubTemplateIntegrationTests.class);
 
 	private ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 			.withPropertyValues("spring.cloud.gcp.pubsub.subscriber.max-ack-extension-period=0")
@@ -101,15 +94,7 @@ public class PubSubTemplateIntegrationTests {
 			headers.put("cactuar", "tonberry");
 			headers.put("fujin", "raijin");
 			pubSubTemplate.publish(topicName, "tatatatata", headers).get();
-
-			// get message
-			AtomicReference<PubsubMessage> pubsubMessageRef = new AtomicReference<>();
-			Awaitility.await().atMost(30, TimeUnit.SECONDS).until(
-					() -> {
-						pubsubMessageRef.set(pubSubTemplate.pullNext(subscriptionName));
-						return pubsubMessageRef.get() != null;
-					});
-			PubsubMessage pubsubMessage = pubsubMessageRef.get();
+			PubsubMessage pubsubMessage = pubSubTemplate.pullNext(subscriptionName);
 
 			assertThat(pubsubMessage.getData()).isEqualTo(ByteString.copyFromUtf8("tatatatata"));
 			assertThat(pubsubMessage.getAttributesCount()).isEqualTo(2);
@@ -158,8 +143,7 @@ public class PubSubTemplateIntegrationTests {
 					f.get(5, TimeUnit.SECONDS);
 				}
 				catch (InterruptedException | ExecutionException | TimeoutException ex) {
-					LOGGER.error(ex);
-					Thread.currentThread().interrupt();
+					ex.printStackTrace();
 				}
 			});
 
